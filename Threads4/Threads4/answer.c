@@ -5,18 +5,19 @@
 #include <stdio.h>
 
 #define BufferSize 20
+#define STATIC_BUFFER_SIZE 16384
 //TODO Define global data structures to be used
-struct DataHolder
+typedef struct DataHolder
 {
 	char* buffer;
 	int bufferSizeInBytes;
-};
+} DataHolder;
 
 // Critical variables
-struct DataHolder buffers[BufferSize];
+DataHolder buffers[BufferSize];
 int read_index = 0;
 int write_index = 0;
-pthread_mutex_t mutex;
+pthread_mutex_t mutex; 
 
 /**
  * This thread is responsible for pulling data off of the shared data 
@@ -24,9 +25,13 @@ pthread_mutex_t mutex;
  */
 void *reader_thread(void *arg) {
 	//TODO: Define set-up required
-	
 	while(1) {
 		//TODO: Define data extraction (queue) and processing 
+		DataHolder cur_buffer = buffers[read_index];
+		read_index ++;
+		read_index = (read_index + 1) % BufferSize;
+		// Passing by value, no mutex anymore
+		process_data(cur_buffer.buffer, cur_buffer.bufferSizeInBytes);
 	}
 	
 	return NULL;
@@ -40,11 +45,22 @@ void *reader_thread(void *arg) {
  */
 void *writer_thread(void *arg) {
 	//TODO: Define set-up required
-	
+	static char* temp_buffer = (char *) malloc(STATIC_BUFFER_SIZE);
 	while(1) {
 		//TODO: Define data extraction (device) and storage 
+		int ret = get_external_data(temp_buffer, STATIC_BUFFER_SIZE)
+		if (ret < 0) {
+			//Error happens when getting external data, we should raise error
+			return NULL
+		}
+		char* storage_ptr = (char *) malloc(ret);
+		DataHolder buffer = {storage_ptr, ret};
+		buffers[write_index] = buffer;
+		write_index ++;
+		write_index = (write_index + 1) % BufferSize;
 	}
 	
+	free(temp_buffer);
 	return NULL;
 }
 
